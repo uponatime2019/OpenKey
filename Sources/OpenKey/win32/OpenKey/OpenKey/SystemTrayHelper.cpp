@@ -79,6 +79,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	switch (message) {
 	case WM_CREATE:
 		taskbarCreated = RegisterWindowMessage(_T("TaskbarCreated"));
+		// Register for session change notifications to handle lock/unlock
+		WTSRegisterSessionNotification(hWnd, NOTIFY_FOR_THIS_SESSION);
+		break;
+	case WM_WTSSESSION_CHANGE:
+		// Reinitialize keyboard hooks on session unlock (wParam == WTS_SESSION_UNLOCK)
+		if (wParam == WTS_SESSION_UNLOCK) {
+			OpenKeyManager::reinitHooks();
+		}
 		break;
 	case WM_USER+2019:
 		AppDelegate::getInstance()->onControlPanel();
@@ -168,6 +176,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		if (message == taskbarCreated) {
 			Shell_NotifyIcon(NIM_ADD, &nid);
 		}
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	case WM_DESTROY:
+		// Unregister session change notifications
+		WTSUnRegisterSessionNotification(hWnd);
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
